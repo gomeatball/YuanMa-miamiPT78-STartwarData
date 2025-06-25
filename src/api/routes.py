@@ -36,12 +36,30 @@ def get_single_planet(planet_id):
 
 @api.route('/favorite/planet/<int:planet_id>', methods=['POST'])
 def add_favorite_planet(planet_id):
-    pass
+    single_planet = db.session.get(Planet, planet_id)
+    # all_planet = Planet.query.all()
+    if single_planet is None:
+        raise APIException("Planet was not valid!", status_code=404)
+
+    single_planet = single_planet.serialize()
+    return jsonify(single_planet), 200
 
 
 @api.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
 def remove_favorite_planet(planet_id):
-    pass
+    data = request.get_json()
+    user_id = data.get("user_id")
+    planet = db.session.get(Planet, planet_id)
+    user = db.session.get(User, user_id)
+    if user is None or planet is None:
+        raise APIException("Planet or user cannot found", status_code=404)
+
+    if planet in user.favorite_planet:
+        user.favorite_planet.remove(planet)
+        db.session.commit()
+        return jsonify(f"{planet.name} removed successfully"), 200
+    else:
+        return jsonify(f"{planet.name} is not in favorites"), 400
 
 
 @api.route('/people', methods=["GET"])
@@ -81,7 +99,19 @@ def add_favorite_person(person_id):
 
 @api.route('/favorite/people/<int:person_id>', methods=['DELETE'])
 def remove_favorite_person(person_id):
-    pass
+    data = request.get_json()
+    user_id = data.get("user_id")
+    person = db.session.get(Person, person_id)
+    user = db.session.get(User, user_id)
+    if user is None or person is None:
+        raise APIException("Person or user cannot found", status_code=404)
+
+    if person in user.favorite_people:
+        user.favorite_people.remove(person)
+        db.session.commit()
+        return jsonify(f"{person.name} removed successfully"), 200
+    else:
+        return jsonify(f"{person.name} is not in favorites"), 400
 
 
 @api.route('/users', methods=['GET'])
