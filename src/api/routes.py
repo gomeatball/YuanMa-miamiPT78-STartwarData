@@ -12,14 +12,14 @@ api = Blueprint('api', __name__)
 CORS(api)
 
 
-@api.route('/planet', methods=['POST', 'GET'])
-def get_planet():
-    all_planet = Planet.query.all()
-    if all_planet is None:
+@api.route('/planets', methods=['GET'])
+def get_planets():
+    all_planets = Planet.query.all()
+    if len(all_planets) == 0:
         return jsonify("Sorry! No star wars planet found!"), 404
     else:
-        all_planet = list(map(lambda x: x.serialize(), all_planet))
-        return jsonify(all_planet), 200
+        all_planets = list(map(lambda x: x.serialize(), all_planets))
+        return jsonify(all_planets), 200
 
 
 @api.route('/planet/<int:planet_id>', methods=['GET'])
@@ -36,13 +36,25 @@ def get_single_planet(planet_id):
 
 @api.route('/favorite/planet/<int:planet_id>', methods=['POST'])
 def add_favorite_planet(planet_id):
-    single_planet = db.session.get(Planet, planet_id)
-    # all_planet = Planet.query.all()
-    if single_planet is None:
-        raise APIException("Planet was not valid!", status_code=404)
+    data = request.get_json()
+    user_id = data.get("user_id")
+    if not user_id:
+            raise APIException("Missing user_id in request body", status_code=400)
+    # print(data)
 
-    single_planet = single_planet.serialize()
-    return jsonify(single_planet), 200
+    user = db.session.get(User,user_id)
+    planet = db.session.get(Planet, planet_id)
+    if not user or not planet:
+            raise APIException("Invalid user or planet ID", status_code=404)
+
+    if planet not in user.favorite_planet:
+           user.favorite_planet.append(planet)
+           db.session.commit()
+
+           return jsonify(f'User {user.username} has added {planet.name} to their favorites,'), 200
+    else:
+           return jsonify({"message": f"{planet.name} is already in {user.username}'s favorites"}), 200
+  
 
 
 @api.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
@@ -65,7 +77,7 @@ def remove_favorite_planet(planet_id):
 @api.route('/people', methods=["GET"])
 def get_people():
     all_people = Person.query.all()
-    if all_people is None:
+    if len(all_people) == 0:
         return jsonify("Sorry! No star wars characters found!"), 404
     else:
         all_people = list(map(lambda x: x.serialize(), all_people))
@@ -86,15 +98,24 @@ def get_single_person(person_id):
 
 @api.route('/favorite/people/<int:person_id>', methods=['POST'])
 def add_favorite_person(person_id):
-    user = request.get_json()
-    print(user)
-    user = db.session.get(User,user["user_id"])
+    data = request.get_json()
+    user_id = data.get("user_id")
+    if not user_id:
+        raise APIException("Missing user_id in request body", status_code=400)
+    # print(data)
+
+    user = db.session.get(User,user_id)
     person = db.session.get(Person, person_id)
+    if not user or not person:
+        raise APIException("Invalid user or person ID", status_code=404)
 
-    user.favorite_people.append(person)
-    db.session.commit()
+    if person not in user.favorite_people:
+       user.favorite_people.append(person)
+       db.session.commit()
 
-    return jsonify(f'User {user.username} has added {person.name} to their favorites,'), 200
+       return jsonify(f'User {user.username} has added {person.name} to their favorites,'), 200
+    else:
+       return jsonify({"message": f"{person.name} is already in {user.username}'s favorites"}), 200
 
 
 @api.route('/favorite/people/<int:person_id>', methods=['DELETE'])
@@ -104,7 +125,7 @@ def remove_favorite_person(person_id):
     person = db.session.get(Person, person_id)
     user = db.session.get(User, user_id)
     if user is None or person is None:
-        raise APIException("Person or user cannot found", status_code=404)
+        raise APIException("Person or user not found", status_code=404)
 
     if person in user.favorite_people:
         user.favorite_people.remove(person)
@@ -117,7 +138,7 @@ def remove_favorite_person(person_id):
 @api.route('/users', methods=['GET'])
 def get_users():
     all_users = User.query.all()
-    if all_users is None:
+    if len(all_users) == 0:
         return jsonify('Sorry! No user found!'), 404
     else:
         all_users = list(map(lambda x: x.serialize(), all_users))
@@ -126,16 +147,20 @@ def get_users():
 
 @api.route('/users/<int:user_id>/favorites', methods=['GET'])
 def get_user_favorites(user_id):
-    current_users = db.session.get(User, user_id)
-    if current_users is None:
-        return APIException('Sorry! No user found!', status_code=404)
+    current_user = db.session.get(User, user_id)
+    if current_user is None:
+        raise APIException('Sorry! No user found!', status_code=404)
 
     all_people = [each_person.serialize()
-                  for each_person in current_users.favorite_people]
-
+                  for each_person in current_user.favorite_people]
+    all_planets = [each_planet.serialize()
+                  for each_planet in current_user.favorite_planet]
     response = {
-        "message": f'User {current_users.username}\'s list of favorite people',
-        "data": all_people,
+        "message": f'User {current_user.username}\'s list of favorite people and planets',
+        "favorites": {
+            "people": all_people,
+            "planets": all_planets
+        }
     }
 
     return jsonify(response), 200
