@@ -15,7 +15,7 @@ CORS(api)
 @api.route('/planets', methods=['GET'])
 def get_planets():
     all_planets = Planet.query.all()
-    if len(all_planets) == 0:
+    if not all_planets:
         return jsonify("Sorry! No star wars planet found!"), 404
     else:
         all_planets = list(map(lambda x: x.serialize(), all_planets))
@@ -39,22 +39,21 @@ def add_favorite_planet(planet_id):
     data = request.get_json()
     user_id = data.get("user_id")
     if not user_id:
-            raise APIException("Missing user_id in request body", status_code=400)
+        raise APIException("Missing user_id in request body", status_code=400)
     # print(data)
 
-    user = db.session.get(User,user_id)
+    user = db.session.get(User, user_id)
     planet = db.session.get(Planet, planet_id)
     if not user or not planet:
-            raise APIException("Invalid user or planet ID", status_code=404)
+        raise APIException("Invalid user or planet ID", status_code=404)
 
     if planet not in user.favorite_planet:
-           user.favorite_planet.append(planet)
-           db.session.commit()
+        user.favorite_planet.append(planet)
+        db.session.commit()
 
-           return jsonify(f'User {user.username} has added {planet.name} to their favorites,'), 200
+        return jsonify(f'User {user.username} has added {planet.name} to their favorites,'), 200
     else:
-           return jsonify({"message": f"{planet.name} is already in {user.username}'s favorites"}), 200
-  
+        return jsonify({"message": f"{planet.name} is already in {user.username}'s favorites"}), 200
 
 
 @api.route('/favorite/planet/<int:planet_id>', methods=['DELETE'])
@@ -77,7 +76,7 @@ def remove_favorite_planet(planet_id):
 @api.route('/people', methods=["GET"])
 def get_people():
     all_people = Person.query.all()
-    if len(all_people) == 0:
+    if not all_people:
         return jsonify("Sorry! No star wars characters found!"), 404
     else:
         all_people = list(map(lambda x: x.serialize(), all_people))
@@ -104,18 +103,18 @@ def add_favorite_person(person_id):
         raise APIException("Missing user_id in request body", status_code=400)
     # print(data)
 
-    user = db.session.get(User,user_id)
+    user = db.session.get(User, user_id)
     person = db.session.get(Person, person_id)
     if not user or not person:
         raise APIException("Invalid user or person ID", status_code=404)
 
     if person not in user.favorite_people:
-       user.favorite_people.append(person)
-       db.session.commit()
+        user.favorite_people.append(person)
+        db.session.commit()
 
-       return jsonify(f'User {user.username} has added {person.name} to their favorites,'), 200
+        return jsonify(f'User {user.username} has added {person.name} to their favorites,'), 200
     else:
-       return jsonify({"message": f"{person.name} is already in {user.username}'s favorites"}), 200
+        return jsonify({"message": f"{person.name} is already in {user.username}'s favorites"}), 200
 
 
 @api.route('/favorite/people/<int:person_id>', methods=['DELETE'])
@@ -138,7 +137,7 @@ def remove_favorite_person(person_id):
 @api.route('/users', methods=['GET'])
 def get_users():
     all_users = User.query.all()
-    if len(all_users) == 0:
+    if not all_users:
         return jsonify('Sorry! No user found!'), 404
     else:
         all_users = list(map(lambda x: x.serialize(), all_users))
@@ -154,7 +153,7 @@ def get_user_favorites(user_id):
     all_people = [each_person.serialize()
                   for each_person in current_user.favorite_people]
     all_planets = [each_planet.serialize()
-                  for each_planet in current_user.favorite_planet]
+                   for each_planet in current_user.favorite_planet]
     response = {
         "message": f'User {current_user.username}\'s list of favorite people and planets',
         "favorites": {
