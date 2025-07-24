@@ -88,7 +88,7 @@ def get_single_person(person_id):
 def add_favorite_person(person_id):
     user = request.get_json()
     print(user)
-    user = db.session.get(User.user["user_id"])
+    user = db.session.get(User,user["user_id"])
     person = db.session.get(Person, person_id)
 
     user.favorite_people.append(person)
